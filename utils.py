@@ -29,9 +29,9 @@ def SVD_dataset(data: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     
     # Preprocessing & Normalization
     data = data.reshape(data.shape[0], -1) 
-    data = data - data.mean(axis=0)
-    data = data / data.std(axis=0)
+    # data = data - data.mean(axis=0)
+    # data = data / data.std(axis=0)
     
     # Singular Value Decomposition 
-    U, sigma, Vt = np.linalg.svd(data)
+    U, sigma, Vt = np.linalg.svd(data, full_matrices=False)
     return U, sigma, Vt
