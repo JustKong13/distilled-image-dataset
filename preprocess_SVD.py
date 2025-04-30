@@ -29,10 +29,10 @@ class DatasetSVD:
         """
         self.dataset_name = dataset
 
-        if self.dataset_name == "CIFAR-10" and path == "":
+        if self.dataset_name == "CIFAR-10" and path is None:
             self.init_cifar()
-        elif self.dataset_name == "CIFAR-10" and path != "":
-            self.load(path)
+        # elif self.dataset_name == "CIFAR-10" and path != "":
+        #     self.load(path)
         
         self.U: np.ndarray
         self.sigma: np.ndarray
@@ -186,12 +186,12 @@ class DatasetSVD:
         original = np.clip(original, 0, 1)
 
         # Fully Reconstructed Image 
-        fully_reconstructed = self.reconstruct_image_CIFAR(U_i, self.sigma, self.Vt)
+        fully_reconstructed = self.reconstruct_image_CIFAR(U_i,)
         fully_reconstructed = np.clip(fully_reconstructed, 0, 1)
         
         # Partially Reconstructed Image 
         start = time.perf_counter() 
-        partially_reconstructed = self.reconstruct_image_CIFAR(U_i, self.sigma, self.Vt, k=k)
+        partially_reconstructed = self.reconstruct_image_CIFAR(U_i, k=k)
         partially_reconstructed = np.clip(partially_reconstructed, 0, 1)
         end = time.perf_counter() 
         print(f"Reconstruction time for k={k}: {end - start:.4f} seconds")
