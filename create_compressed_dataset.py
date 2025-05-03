@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-=======
 # Script to create compressed datasets for CIFAR-10 using SVD 
-
->>>>>>> ran experiments
 from preprocess_SVD import * 
 import time 
 
