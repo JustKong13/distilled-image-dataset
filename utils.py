@@ -23,7 +23,8 @@ def prepare_dataset(singular_values: int) -> TensorDataset:
 
 
 def reconstruct_img(x, sigma, Vt) -> torch.Tensor: 
-    x = x @ (torch.diag(sigma) @  Vt)
+    k = x.shape[0]
+    x = x @ (torch.diag(sigma[:k]) @  Vt[:k, :])
     x = x.reshape(32, 32, 3)
     plt.imshow(x)
     x = x.permute(2, 0, 1)

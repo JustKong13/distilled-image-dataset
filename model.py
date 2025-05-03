@@ -18,7 +18,8 @@ class SimpleCNN(nn.Module):
         self.fc2 = nn.Linear(128, 10)
 
     def reconstruct_img(self, x) -> torch.Tensor: 
-        x = x @ (torch.diag(self.sigma) @  self.Vt)
+        k = x.shape[1] # number of singular values 
+        x = x @ (torch.diag(self.sigma[:k]) @  self.Vt[:k, :])
         x = x.reshape(x.shape[0], 32, 32, 3)
         x = x.permute(0, 3, 1, 2)
         x = torch.clip(x, 0, 1)

@@ -100,7 +100,7 @@ class DatasetSVD:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         
         # Save the SVD to a file
-        np.savez(path, U=self.U[:, k], sigma=self.sigma[:k], Vt=self.Vt[:k, :])
+        np.savez(path, U=self.U[:, :k], sigma=self.sigma, Vt=self.Vt)
         print(f"Saved SVD to {path}")
 
 
