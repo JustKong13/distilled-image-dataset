@@ -1,7 +1,9 @@
 import numpy as np 
+from numpy.fft import fft2, ifft2, fftshift, ifftshift
 from typing import Tuple
 import time 
 import matplotlib.pyplot as plt
+import os
 
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -19,7 +21,11 @@ class DatasetSVD:
         X_test (np.ndarray): The test set, shape (N, D)
         y_test (np.ndarray): The labels for the test set, shape (N,)
     """
-    def __init__(self, dataset:str = "CIFAR-10", path:str = None): 
+    def __init__(self, 
+                 fft: bool = False,  
+                 dataset:str = "CIFAR-10", 
+                 path_to_SVD_dataset:str = None, 
+                 load_k_svd:int = None): 
         """
         Initializes the CIFAR-10 dataset and computes the SVD for the training set. If path is 
         provided, it will load the dataset from the path.
@@ -28,12 +34,15 @@ class DatasetSVD:
             path (str): The path to the dataset, and corresponding attributes. 
         """
         self.dataset_name = dataset
+        self.allow_fft = fft
+        self.path = path_to_SVD_dataset
 
-        if self.dataset_name == "CIFAR-10" and path is None:
+
+        if self.dataset_name == "CIFAR-10" and self.path is None:
             self.init_cifar()
         # elif self.dataset_name == "CIFAR-10" and path != "":
         #     self.load(path)
-        
+
         self.U: np.ndarray
         self.sigma: np.ndarray
         self.Vt: np.ndarray
@@ -53,6 +62,11 @@ class DatasetSVD:
         X_train = X_train.astype(np.float32) / 255.0  # Normalize to [0,1]
         X_test = X_test.astype(np.float32) / 255.0  # Normalize to [0,1]
 
+        if self.allow_fft: 
+            X_train = fft2(X_train, axes=(1,2))
+            X_train = fftshift(X_train, axes=(1,2))
+            X_train = np.abs(X_train) # or maybe np.real? 
+
         U, sigma, Vt = self.SVD_dataset(X_train)
 
         self.U = U 
@@ -70,21 +84,24 @@ class DatasetSVD:
             dict = pickle.load(fo, encoding='bytes')
         return dict
     
-    def save(self, path:str = None) -> None: 
+    def save(self, path:str = None, k:int = 3072) -> None: 
         """
         Saves the SVD of the dataset to a file. 
         Params: 
             path (str): The path to save the SVD to. If None, saves to the default path.
         """
-        if path == None: 
+        if path is None: 
             path = "checkpoints/svd_cifar10.pth"
-            dataset_path = "checkpoints/cifar10_dataset.npz"
 
-        np.savez(path, U=self.U, sigma=self.sigma, Vt=self.Vt)
+        if self.allow_fft: 
+            path = path.replace(".pth", "_fft.pth")
+
+        # Create the directory if it doesn't exist
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        
+        # Save the SVD to a file
+        np.savez(path, U=self.U[:, k], sigma=self.sigma[:k], Vt=self.Vt[:k, :])
         print(f"Saved SVD to {path}")
-
-        np.savez(dataset_path, X_train=self.X_train, y_train=self.y_train, X_test=self.X_test, y_test=self.y_test)
-        print(f"Saved dataset to {dataset_path}")
 
 
     def load(self, path:str = None) -> None: 
@@ -93,9 +110,9 @@ class DatasetSVD:
         Params: 
             path (str): The path to load the SVD from. If None, loads from the default path.
         """
-        if path == None: 
-            path = "checkpoints/svd_cifar10.pth"
-            dataset_path = "checkpoints/cifar10_dataset.npz"
+        assert path is not None, "Path to SVD file must be provided"
+        
+        dataset_path = path + "_dataset.npz"
 
         data = np.load(path)
         self.U = data['U']
@@ -165,16 +182,24 @@ class DatasetSVD:
         reconstructed_image = reconstructed_image.reshape(32, 32, 3)
         reconstructed_image = np.clip(reconstructed_image, 0, 1)
 
+        if self.allow_fft: 
+            reconstructed_image = ifftshift(reconstructed_image, axes=(1,2))
+            reconstructed_image = ifft2(reconstructed_image, axes=(1,2))
+            reconstructed_image = np.abs(reconstructed_image)
+            reconstructed_image = np.clip(reconstructed_image, 0, 1)
+
         return reconstructed_image
 
 
-    def compare_reconstruction(self, i: int, k: int = 3072) -> None : 
+    def compare_reconstruction(self, i: int, k: int = 3072) -> Tuple[np.ndarray, np.ndarray, np.ndarray]: 
         """
         Visualizes the reconstruciton of the i-th image in the dataset using the first k singular 
         values. 
         Args: 
             i (int): The index of the image to reconstruct
             k (int): The number of singular values to use for reconstruction
+        Returns: 
+            Original Image, Fully Reconstructed Image, Partially Reconstructed Image 
         """
         d1 = self.X_train.shape[1]
         d2 = self.X_train.shape[2]
@@ -205,6 +230,8 @@ class DatasetSVD:
         ax[2].imshow(partially_reconstructed)
         ax[2].set_title(f"Partially Reconstructed Image (k={k})")
 
+        return original, fully_reconstructed, partially_reconstructed
+
 
     def plot_singular_values(self): 
         """
@@ -216,3 +243,39 @@ class DatasetSVD:
         plt.xlabel("Index")
         plt.ylabel("Singular Value")
         plt.grid(True)
+
+
+    def add_image_train(self, image: np.ndarray, label: int) -> None: 
+        """
+        Adds an image to the dataset. This function adds the image to X_train, y_train, and computes the row contribution to U. 
+        Params: 
+            image (np.ndarray): The image to add, shape (32, 32, 3)
+            label (int): The label for the image
+        """
+
+        assert image.shape == (32, 32, 3), "Image must be of shape (32, 32, 3)"
+        assert label in range(10), "Label must be between 0 and 9"
+        
+        # Add the image to the training set
+        self.X_train = np.append(self.X_train, [image], axis=0)
+        self.y_train = np.append(self.y_train, [label])
+
+        image = image.flatten() 
+        new_U = (image @ np.linalg.inv(self.Vt)) @ np.linalg.inv(np.diag(self.sigma))
+        self.U = np.append(self.U, [new_U], axis=0)
+        return new_U 
+    
+    def compute_U_for_image(self, image: np.ndarray) -> np.ndarray: 
+        """
+        Computes the U matrix for a given image using SVD.
+        Params:
+            img (np.ndarray): The input image.
+        Returns:
+            np.ndarray: The U matrix row contribution for the image.
+        """
+        assert image.shape == (32, 32, 3), "Image must be of shape (32, 32, 3)"
+        
+        # Flatten the image
+        image = image.flatten() 
+        new_U = (image @ np.linalg.inv(self.Vt)) @ np.linalg.inv(np.diag(self.sigma))
+        return new_U
