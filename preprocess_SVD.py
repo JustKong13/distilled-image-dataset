@@ -101,7 +101,11 @@ class DatasetSVD:
         
         # Save the SVD to a file
 <<<<<<< HEAD
+<<<<<<< HEAD
         np.savez(path, U=self.U[:, :k], sigma=self.sigma, Vt=self.Vt)
+=======
+        np.savez(path, U=self.U[:, :k], sigma=self.sigma[:k], Vt=self.Vt[:k, :])
+>>>>>>> ran experiments
 =======
         np.savez(path, U=self.U[:, :k], sigma=self.sigma[:k], Vt=self.Vt[:k, :])
 >>>>>>> ran experiments
