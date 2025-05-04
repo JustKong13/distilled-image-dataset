@@ -40,6 +40,9 @@ class DatasetSVD:
 
         if self.dataset_name == "CIFAR-10" and self.path is None:
             self.init_cifar()
+
+        if self.dataset_name == "CIFAR-100": 
+            self.init_cifar100()
         # elif self.dataset_name == "CIFAR-10" and path != "":
         #     self.load(path)
 
@@ -51,6 +54,26 @@ class DatasetSVD:
         self.X_test: np.ndarray
         self.y_test: np.ndarray
 
+
+    def init_cifar100(self):
+        """
+        Initialize the CIFAR-100 dataset and computes the SVD for the training set. 
+        """
+        from tensorflow.keras.datasets import cifar100   
+        # Load CIFAR-100 dataset
+        (X_train, y_train), (X_test, y_test) = cifar100.load_data()
+        X_train = X_train.astype(np.float32) / 255.0  # Normalize to [0,1]
+        X_test = X_test.astype(np.float32) / 255.0  # Normalize to [0,1]
+
+        U, sigma, Vt = self.SVD_dataset(X_train)
+
+        self.U = U 
+        self.sigma = sigma 
+        self.Vt = Vt 
+        self.X_train = X_train 
+        self.y_train = y_train 
+        self.X_test = X_test 
+        self.y_test = y_test
         
     def init_cifar(self): 
         """
@@ -100,15 +123,8 @@ class DatasetSVD:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         
         # Save the SVD to a file
-<<<<<<< HEAD
-<<<<<<< HEAD
         np.savez(path, U=self.U[:, :k], sigma=self.sigma, Vt=self.Vt)
-=======
         np.savez(path, U=self.U[:, :k], sigma=self.sigma[:k], Vt=self.Vt[:k, :])
->>>>>>> ran experiments
-=======
-        np.savez(path, U=self.U[:, :k], sigma=self.sigma[:k], Vt=self.Vt[:k, :])
->>>>>>> ran experiments
         print(f"Saved SVD to {path}")
 
 
