@@ -13,7 +13,7 @@ def prepare_dataset(singular_values: int) -> TensorDataset:
     Returns:
         U, sigma, Vt (torch.Tensor): The left singular vectors, singular values, and right singular vectors.
     """
-    file_name = f"./CompressedDatasets/cifar/cifar10_{singular_values}.npz"
+    file_name = f"./CompressedDatasets/cifar10/cifar10_{singular_values}.npz"
     data = np.load(file_name) 
     U = data["U"]
     sigma = data["sigma"]
